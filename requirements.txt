@@ -1,0 +1,12 @@
+beautifulsoup4==4.14.2
+fastapi==0.121.1
+google_api_python_client==2.145.0
+google_api_python_client==2.185.0
+google_auth_oauthlib==1.2.2
+pandas==2.3.3
+protobuf==6.33.0
+pydantic==2.12.4
+python-dotenv==1.2.1
+python_dateutil==2.9.0.post0
+streamlit==1.44.1
+streamlit==1.51.0
