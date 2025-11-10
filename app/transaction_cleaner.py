@@ -7,7 +7,9 @@ import pandas as pd
 from datetime import datetime
 from typing import List, Dict
 import re
-from semantic_parsing import transactions
+from semantic_parsing import parser
+
+
 def domain_to_vendor(domain: str) -> str:
 
     if not isinstance(domain, str) or not domain.strip():
@@ -38,6 +40,3 @@ def clean_transactions(df:pd.DataFrame) -> List[Dict]:
     print(f"✅ {len(cleaned)} cleaned transactions ready for matching.")
     return cleaned
 
-if __name__ == "__main__":
-    transactions = clean_transactions(transactions)
-    print(transactions) 

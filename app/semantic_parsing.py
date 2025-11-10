@@ -179,7 +179,7 @@ Example:
         return subset
     
 parser = TransactionCleaner()
-transactions = parser.parse_csv("app\data\Loan Payments CSV - BMO $3,787.47.csv")
+
 
 
 if __name__ == "__main__":

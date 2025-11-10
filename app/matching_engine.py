@@ -3,7 +3,6 @@ import logging
 from datetime import datetime, timezone
 from time import time
 import pandas as pd
-
 from gmail_utils import parse_date_dynamic
 from llm_utils import score_match_with_gemini
 
@@ -50,9 +49,9 @@ def filter_emails(txn: dict, emails: list, date_window: int = 3, min_matches: in
     
     vendor_name = normalize_text(txn.get("vendor_name", "") or txn.get("Vendor", "") or txn.get("VendorName", ""))
     vendor_domain = (txn.get("Vendor", "") or txn.get("Vendor Domain", "")).lower()
-    description = normalize_text(txn.get("Description", "") or txn.get("Description", "") or txn.get("Memo", ""))
-    invoice_number = str(txn.get("Invoice number", "") or txn.get("Invoice Number", "") or txn.get("TransactionID", "")).strip().upper()
-    txn_amount = float(txn.get("Amount", 0) or txn.get("amount", 0))
+    description = normalize_text(txn.get("description", "") or txn.get("description", "") or txn.get("Memo", ""))
+    invoice_number = str(txn.get("transaction_id", "") or txn.get("Invoice Number", "") or txn.get("TransactionID", "")).strip().upper()
+    txn_amount = float(txn.get("amount", 0) or txn.get("amount", 0))
     txn_date = make_aware(parse_date_dynamic(txn.get("date") or txn.get("Date", "")))
     
     logger.info(f"Stage 1 Filter START - Transaction: {invoice_number}")
