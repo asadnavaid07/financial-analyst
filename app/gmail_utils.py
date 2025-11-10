@@ -1,30 +1,36 @@
 import os
+import json
 import base64
 import hashlib
 from bs4 import BeautifulSoup
-import json
-import streamlit as st
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
 from datetime import datetime
 from dateutil import parser as date_parser
 import pandas as pd
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+import streamlit as st
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
-# Load service account from Streamlit secrets
-service_account_info = st.secrets["GMAIL_SERVICE_ACCOUNT"]
-credentials = service_account.Credentials.from_service_account_info(
-    service_account_info, scopes=SCOPES
-)
-
-# Build Gmail service
 def get_gmail_service():
-    return build("gmail", "v1", credentials=credentials)
+    """Load Gmail API service using pre-generated OAuth token (works on Streamlit Cloud)."""
+    try:
+        token_data = json.loads(st.secrets["GMAIL_TOKEN"])
+        creds = Credentials.from_authorized_user_info(token_data, SCOPES)
+    except Exception:
+        # Fallback: try to load from local token.json (for local dev)
+        if os.path.exists("token.json"):
+            creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+        else:
+            raise RuntimeError("❌ No Gmail credentials found in st.secrets or token.json")
 
-# -------------------------------
-# Your existing utility functions
-# -------------------------------
+    # Refresh token automatically if expired
+    if creds and creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+
+    return build("gmail", "v1", credentials=creds)
+
 def parse_date_dynamic(date_value):
     if isinstance(date_value, pd.Timestamp):
         return date_value.to_pydatetime()
@@ -38,6 +44,7 @@ def parse_date_dynamic(date_value):
     return None
 
 def get_email_body(payload):
+    """Extract plain or HTML text content from Gmail message payload."""
     if "body" in payload and "data" in payload["body"]:
         try:
             data = payload["body"]["data"]
@@ -63,29 +70,20 @@ def get_email_body(payload):
     return "[No text content found]"
 
 def fetch_recent_emails(start_date, end_date):
+    """Fetch emails within a date range."""
     service = get_gmail_service()
     query = f"after:{start_date} before:{end_date}"
-    st.info(f"Fetching emails between {start_date} - {end_date}...")
-
     results = service.users().messages().list(userId="me", q=query).execute()
     messages = results.get("messages", [])
-
     email_data = []
+
     for msg in messages:
         msg_id = msg["id"]
         gmail_url = f"https://mail.google.com/mail/u/0/#inbox/{msg_id}"
         msg_data = service.users().messages().get(userId="me", id=msg_id, format="full").execute()
 
         headers = msg_data["payload"]["headers"]
-        email_info = {
-            "id": msg_id,
-            "gmail_url": gmail_url,
-            "from": None,
-            "subject": None,
-            "date": None,
-            "snippet": None,
-            "attachments": [],
-        }
+        email_info = {"id": msg_id, "gmail_url": gmail_url, "from": None, "subject": None, "date": None, "snippet": None, "attachments": []}
 
         for header in headers:
             name = header["name"].lower()
@@ -98,15 +96,13 @@ def fetch_recent_emails(start_date, end_date):
 
         email_info["snippet"] = get_email_body(msg_data["payload"])[:300]
 
-        # Handle attachments
+        # Extract attachments (if any)
         if "parts" in msg_data["payload"]:
             for part in msg_data["payload"]["parts"]:
                 body = part.get("body", {})
                 if "attachmentId" in body:
                     att_id = body["attachmentId"]
-                    attachment = service.users().messages().attachments().get(
-                        userId="me", messageId=msg_id, id=att_id
-                    ).execute()
+                    attachment = service.users().messages().attachments().get(userId="me", messageId=msg_id, id=att_id).execute()
                     data = attachment.get("data")
                     if data:
                         file_bytes = base64.urlsafe_b64decode(data)
@@ -117,14 +113,8 @@ def fetch_recent_emails(start_date, end_date):
                         })
         email_data.append(email_info)
 
-    st.success(f"Found {len(email_data)} emails between {start_date} - {end_date}")
+    print(f"✅ Found {len(email_data)} emails between {start_date} - {end_date}")
     return email_data
-
-
-
-
-
-
 
 
 # from email import parser
