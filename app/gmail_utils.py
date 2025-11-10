@@ -13,7 +13,7 @@ import pandas as pd
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
 # Load service account from Streamlit secrets
-service_account_info = json.loads(st.secrets["GMAIL_SERVICE_ACCOUNT"])
+service_account_info = st.secrets["GMAIL_SERVICE_ACCOUNT"]
 credentials = service_account.Credentials.from_service_account_info(
     service_account_info, scopes=SCOPES
 )
